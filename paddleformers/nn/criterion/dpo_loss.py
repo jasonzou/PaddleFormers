@@ -34,7 +34,7 @@ def dpo_preprocess_inputs(self, logits, labels):
     hidden_states, lm_head_weight, lm_head_bias, transpose_y = None, None, None, None
 
     def unpack_logits(obj):
-        if isinstance(obj, tuple):
+        if isinstance(obj, (tuple, list)):
             if len(obj) == 1:
                 return unpack_logits(obj[0])
             if len(obj) == 2:
@@ -133,7 +133,7 @@ def dpo_logps(
                 transpose_y=transpose_y,
                 tensor_parallel_output=self.config.tensor_parallel_output,
             )
-        if isinstance(logits, tuple):
+        if isinstance(logits, (tuple, list)):
             logits = logits[0]
         elif isinstance(logits, CausalLMOutputWithPast):
             logits = logits.logits

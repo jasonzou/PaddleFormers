@@ -136,6 +136,18 @@ class DPOTrainer(Trainer):
         elif "attn_mask_startend_row_indices" in batch:
             dpo_inputs["attn_mask_startend_row_indices"] = batch["attn_mask_startend_row_indices"]
 
+        for mm_key in (
+            "pixel_values",
+            "image_grid_thw",
+            "pixel_values_videos",
+            "video_grid_thw",
+            "token_type_ids",
+            "images",
+            "grid_thw",
+        ):
+            if mm_key in batch and batch[mm_key] is not None:
+                dpo_inputs[mm_key] = batch[mm_key]
+
         if self.model_with_dpo_criterion:
             dpo_inputs["response_labels"] = batch["response_labels"]
             dpo_inputs["response_indexs"] = batch["response_indexs"]
@@ -222,8 +234,8 @@ class DPOTrainer(Trainer):
             model._prepare_pipeline_inputs_func = _prepare_pipeline_dpo_inputs_func_fleet
             return model
 
-        model = fleet.distributed_model(model)
         if self.args.pipeline_model_parallel_size > 1:
+            model = fleet.distributed_model(model)
             model._prepare_pipeline_inputs_func = prepare_pipeline_dpo_inputs_func
 
         return model

@@ -248,7 +248,7 @@ def mm_dpo_collate_fn(
     max_seq_len = calc_padding_size(max_seq_len, training_args)
 
     if isinstance(model, LoRAModel):
-        model = model.model.base_model
+        model = model.model
 
     if model is not None and hasattr(model, "get_rope_index"):
         get_rope_func = model.get_rope_index  # transformers < 4.52.0 or lora
@@ -444,6 +444,15 @@ def mm_dpo_collate_fn(
         elif key == "position_ids":
             input_dict[key] = paddle.concat(input_dict[key], axis=bs_idx_in_rope)
             input_dict[key] = np.array(input_dict[key])
+        elif key in ("pixel_values", "pixel_values_videos"):
+            vals = [v for v in input_dict[key] if v is not None and not (isinstance(v, list) and len(v) == 0)]
+            input_dict[key] = paddle.concat(vals, axis=0) if len(vals) > 0 else None
+        elif key in ("image_grid_thw", "video_grid_thw"):
+            sub_tensors = []
+            for sub in input_dict[key]:
+                if len(sub) > 0:
+                    sub_tensors.append(paddle.stack(sub, axis=0))
+            input_dict[key] = paddle.concat(sub_tensors, axis=0) if len(sub_tensors) > 0 else None
         else:
             input_dict[key] = np.array(input_dict[key])
 
@@ -661,7 +670,7 @@ def mm_collate_fn(
     """
 
     if isinstance(model, LoRAModel):
-        model = model.model.base_model
+        model = model.model
 
     if model is not None and hasattr(model, "get_rope_index"):
         get_rope_func = model.get_rope_index  # transformers < 4.52.0 or lora
