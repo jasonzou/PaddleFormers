@@ -70,15 +70,28 @@ class MultiSourceDataset(IterableDataset):
         """
 
         # arguments process
-        task_dataset_path = [
-            path for path in str(dataset_config["task_group"]).replace(" ", "").split(",") if path != ""
-        ]
-        task_dataset_prob = [
-            float(prob) for prob in str(dataset_config["task_group_prob"]).replace(" ", "").split(",") if prob != ""
-        ]
-        task_dataset_type = [
-            type_ for type_ in str(dataset_config["sub_dataset_type"]).replace(" ", "").split(",") if type_ != ""
-        ]
+        def _parse_multi_field(raw):
+            """Parse a multi-source config field that may be a list, a
+            comma-separated string, or a Python list-repr string
+            (e.g. ``"['a', 'b']"`` produced by ``str(list)``).
+            """
+            import ast
+
+            if isinstance(raw, (list, tuple)):
+                return [str(p).strip() for p in raw if str(p).strip()]
+            raw_str = str(raw).strip()
+            if raw_str.startswith("["):
+                try:
+                    parsed = ast.literal_eval(raw_str)
+                    if isinstance(parsed, (list, tuple)):
+                        return [str(p).strip() for p in parsed if str(p).strip()]
+                except (ValueError, SyntaxError):
+                    pass
+            return [p for p in raw_str.replace(" ", "").split(",") if p]
+
+        task_dataset_path = _parse_multi_field(dataset_config["task_group"])
+        task_dataset_prob = [float(p) for p in _parse_multi_field(dataset_config["task_group_prob"])]
+        task_dataset_type = _parse_multi_field(dataset_config["sub_dataset_type"])
 
         if not (len(task_dataset_path) == len(task_dataset_prob) == len(task_dataset_type)):
             raise ValueError(
