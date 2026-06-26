@@ -212,6 +212,19 @@ class BaseDPODataSet:
         else:
             # Custom backends will concatenate the "system" message and the first "user" message together.
             session_start_index = len(example["messages"])
+        # When the response starts with the same role as the last message of the original
+        # conversation, the response replaces (rather than extends) the last message.
+        # This maintains proper user-assistant alternating structure for encode_multiturn.
+        if len(chosen_m) > 0 and len(example["chosen_response"]) > 0:
+            if chosen_m[-1]["role"] == example["chosen_response"][0]["role"]:
+                chosen_m = chosen_m[:-1]
+                if self.template_backend != "jinja":
+                    session_start_index = len(chosen_m)
+        if len(rejected_m) > 0 and len(example["rejected_response"]) > 0:
+            if rejected_m[-1]["role"] == example["rejected_response"][0]["role"]:
+                rejected_m = rejected_m[:-1]
+                if self.template_backend != "jinja":
+                    session_start_index = len(rejected_m)
         chosen_m.extend(example["chosen_response"])
         rejected_m.extend(example["rejected_response"])
 
